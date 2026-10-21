@@ -127,6 +127,18 @@ class Http(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("amount", body["error"])
 
+    def preflight(self, origin):
+        req = urllib.request.Request(self.base + "/sales", method="OPTIONS", headers={"Origin": origin})
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, resp.headers
+
+    def test_cors_only_for_allowed_sites(self):
+        app.ALLOWED_ORIGINS = {"https://vendas.example.com"}
+        status, headers = self.preflight("https://vendas.example.com")
+        self.assertEqual((status, headers["Access-Control-Allow-Origin"]), (204, "https://vendas.example.com"))
+        self.assertIn("X-Region", headers["Access-Control-Expose-Headers"])
+        self.assertIsNone(self.preflight("https://evil.example.com")[1]["Access-Control-Allow-Origin"])
+
     def test_health_and_info(self):
         self.assertEqual(self.call("GET", "/health"), (200, b"ok\n"))
         self.assertEqual(self.call("GET", "/info")[1]["region_state"], "ACTIVE")
