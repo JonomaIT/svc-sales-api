@@ -19,6 +19,8 @@ client ──► sales.joshuel.com.br ──► Cloudflare ──► ingress (Lo
 | `GET /info` | task, region and region state (`ACTIVE` / `PASSIVE`) |
 | `GET /health` | `ok` (ALB health check; never calls AWS) |
 
+CORS: only the sites in `ALLOWED_ORIGINS` (`https://vendas.joshuel.com.br`, [`web-sales`](https://github.com/JonomaIT/web-sales)) may call it from a browser; `X-Region` is exposed to them.
+
 Money is never a float: amounts are read as decimals, rounded half up to cents and returned as text (`"12.50"`). Every answer carries `X-Region`.
 
 ## What the platform gives it

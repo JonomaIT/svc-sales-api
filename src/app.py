@@ -27,6 +27,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("PORT", "8080"))
 REGION = os.environ.get("AWS_REGION", "unknown")
+# Browsers may call the API only from these sites (comma-separated origins, e.g. web-sales).
+ALLOWED_ORIGINS = {o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()}
 SALE_PATH = re.compile(r"^/sales/([0-9a-f-]{36})$")
 
 
@@ -128,6 +130,17 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "svc-sales-api"
     sys_version = ""
 
+    def _cors(self):
+        # Only the listed sites get CORS headers; any other origin is refused by the browser.
+        origin = self.headers.get("Origin")
+        if origin and origin in ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Expose-Headers", "X-Region")
+            self.send_header("Access-Control-Max-Age", "600")
+            self.send_header("Vary", "Origin")
+
     def _send(self, status, body=None):
         data = b"" if body is None else (body.encode() if isinstance(body, str) else json.dumps(body, indent=2).encode())
         self.send_response(status)
@@ -136,8 +149,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Region", REGION)
+        self._cors()
         self.end_headers()
         self.wfile.write(data)
+
+    def do_OPTIONS(self):  # noqa: N802 (http.server naming): CORS preflight
+        self.send_response(204)
+        self._cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):  # noqa: N802 (http.server naming)
         if self.path == "/health":
