@@ -10,6 +10,6 @@ env = {
 }
 
 slo = {
-  disponibilidade = 99.5
-  latencia_p95_ms = 300
+  availability   = 99.5
+  latency_p95_ms = 300
 }
