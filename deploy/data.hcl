@@ -7,3 +7,9 @@ tables = {
 
 # Every sale created is published here; svc-sales-worker's queues subscribe to it in every region.
 topics = ["sales-created"]
+
+# Who else may use this data (ADR-014): the owner agrees here, in a file the platform team reviews.
+shares = {
+  "table/sales"         = { "svc-sales-worker" = "read-write" } # the worker marks each sale PROCESSED
+  "topic/sales-created" = { "svc-sales-worker" = "read" }       # its queues subscribe in every region
+}
