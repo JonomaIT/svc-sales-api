@@ -1,5 +1,5 @@
 regions = ["us-east-1", "sa-east-1"] # one deploy per region; Cloudflare fails over in this order
-hosts   = ["sales.joshuel.com.br"]
+hosts   = ["sales"] # sales.<platform zone>
 
 cpu          = 256
 memory       = 512
