@@ -19,7 +19,7 @@ client ──► sales.joshuel.com.br ──► Cloudflare ──► ingress (Lo
 | `GET /info` | task, region and region state (`ACTIVE` / `PASSIVE`) |
 | `GET /health` | `ok` (ALB health check; never calls AWS) |
 
-CORS: only the sites in `ALLOWED_ORIGINS` (`https://vendas.joshuel.com.br`, [`web-sales`](https://github.com/JonomaIT/web-sales)) may call it from a browser; `X-Region` is exposed to them.
+CORS: only the sites in `ALLOWED_ORIGINS` (`https://vendas.{zone}`, the platform's zone, [`web-sales`](https://github.com/JonomaIT/web-sales)) may call it from a browser; `X-Region` is exposed to them.
 
 Money is never a float: amounts are read as decimals, rounded half up to cents and returned as text (`"12.50"`). Every answer carries `X-Region`.
 
@@ -52,15 +52,16 @@ By hand, the same steps:
 ```bash
 # data: once per account, every region in one state
 cd pipelines/terraform-runner/data
-terraform init -backend-config=../../../organization/backends/production.tfbackend -backend-config=key=production/cross-region/data/svc-sales-api
-terraform apply -var-file=../../../svc-sales-api/deploy/data.hcl \
+terraform init -backend-config=bucket=jonomait-production-tfstate -backend-config=region=us-east-1 -backend-config=key=production/cross-region/data/svc-sales-api
+terraform apply -var-file=../../../svc-sales-api/deploy/data.hcl -var prefix=jonomait \
   -var environment=production -var name=svc-sales-api -var 'regions=["us-east-1","sa-east-1"]'
 
 # app: once per region in deploy/env/production.tfvars
 cd ../ecs
-terraform init -backend-config=../../../organization/backends/production.tfbackend -backend-config=key=production/us-east-1/apps/svc-sales-api
+terraform init -backend-config=bucket=jonomait-production-tfstate -backend-config=region=us-east-1 -backend-config=key=production/us-east-1/apps/svc-sales-api
 terraform apply -var-file=../../../svc-sales-api/deploy/app.hcl -var-file=../../../svc-sales-api/deploy/env/production.tfvars \
-  -var environment=production -var region=us-east-1 -var image=151995620066.dkr.ecr.us-east-1.amazonaws.com/svc-sales-api:<sha>
+  -var prefix=jonomait -var environment=production -var region=us-east-1 -var 'regions=["us-east-1","sa-east-1"]' \
+  -var image=<shared-services account>.dkr.ecr.us-east-1.amazonaws.com/svc-sales-api:<sha>
 ```
 
 Smoke test after a deploy: `hurl --test --variable host=https://sales.joshuel.com.br tests/smoke/sales.hurl`.
